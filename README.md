@@ -6,7 +6,7 @@ If you use Mac, you must to use command below this
 python3 -m venv env
 source env/bin/activate
 ```
-Next, install package(FastAPI, )
+Next, install package(FastAPI, SQLAlchemy, psycopg2-binary)
 ```
 pip install fastapi sqlalchemy psycopg2-binary
 ```
