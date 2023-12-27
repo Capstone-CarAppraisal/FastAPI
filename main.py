@@ -8,6 +8,8 @@ import httpx
 import models
 from database import engine,SessionLocal
 from sqlalchemy.orm import Session
+import pandas as pd
+import joblib
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
@@ -67,6 +69,19 @@ async def read_choices(question_id:int,db:db_dependency):
     if not result:
         raise HTTPException(status_code=404,detail='Question not found')
     return result
+
+@app.post("/predict")
+async def predict(Id : int):
+    try:
+        df = pd.read_csv('preprocessed_data.csv')
+        df = df.loc[df['Id'] == Id]
+        df.drop(columns=['cost', 'car_model', 'Id'],inplace=True)
+        rfModel = joblib.load("random_forest.model")
+        predict = rfModel.predict(df)
+        result = predict[0]
+        return {"prediction":result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
 
 @app.get('/get_firstuser')
 def first_user():
