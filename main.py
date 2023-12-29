@@ -1,6 +1,6 @@
 from typing import Union
 from pydantic import BaseModel
-from fastapi import FastAPI,HTTPException, Depends
+from fastapi import FastAPI,HTTPException, Depends, UploadFile, File
 from typing import Optional ,List ,Annotated
 from pydantic import BaseModel
 import requests
@@ -10,15 +10,22 @@ from database import engine,SessionLocal
 from sqlalchemy.orm import Session
 import pandas as pd
 import joblib
+from PIL import Image
+import io
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torchvision import transforms
+from fastapi.responses import JSONResponse
+import torchvision
+import torch.nn as nn
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
-
-class ChoiceBase(BaseModel):
-    choice_text:str
-    is_correct:bool
-class QuestionBase(BaseModel):
-    question_text:str
-    choices: List[ChoiceBase]
+device = torch.device('cpu')
+pretrain_weight = torchvision.models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
+model = torchvision.models.efficientnet_v2_s(weights = pretrain_weight)
+model.classifier[1] = nn.Linear(1280, 102)
+model = model.to(device)
 class CarBase(BaseModel):
     car_year:int | None = None
     brand:str | None = None
@@ -39,52 +46,28 @@ def get_db():
     finally:
         db.close()
 db_dependency = Annotated[Session,Depends(get_db)]    
+transform = transforms.Compose(
+    [transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean = [0.507, 0.487, 0.441], std = [0.267, 0.256, 0.276])
+    ])
 
-@app.post("/questions/")
-async def create_questions(question:QuestionBase,db:db_dependency):
-    db_question = models.Question(question_text=question.question_text)
-    db.add(db_question)
-    db.commit()
-    db.refresh(db_question)
-    for choice in question.choices:
-        db_choice = models.Choices(choice_text=choice.choice_text,is_correct=choice.is_correct,question_id = db_question.id)
-        db.add(db_choice)
-    db.commit()
-    return db_question
-@app.get("/questions/")
-async def read_question(db:db_dependency):
-    result = db.query(models.Question).all()
-    return result
-@app.get("/questions/{question_id}")
-async def read_question(question_id:int,db:db_dependency):
-    result = db.query(models.Question).filter(models.Question.id == question_id).first()
-    if not result:
-        raise HTTPException(status_code=404,detail='Question not found')
-    return result
-@app.delete("/question/{question_id}")
-async def delete_question(question_id:int,db:db_dependency):
-    result = db.query(models.Choices).filter(models.Choices.question_id == question_id).all()
-    for res in result:
-        db.delete(res)
-    db.commit()
-    result = db.query(models.Question).filter(models.Question.id == question_id).first()
-    db.delete(result)
-    db.commit()
-@app.put("/questions/{question_id}")
-async def update_question(question_text:str,question_id:int,db:db_dependency):
-    result = db.query(models.Question).filter(models.Question.id == question_id).first()
-    result.question_text = question_text
-    db.add(result)
-    db.commit()
-@app.get("/choices/{question_id}")
-async def read_choices(question_id:int,db:db_dependency):
-    result = db.query(models.Choices).filter(models.Choices.question_id == question_id).all()
-    if not result:
-        raise HTTPException(status_code=404,detail='Question not found')
-    return result
+def preprocess_image(image):
+    image = transform(image)
+    return image.unsqueeze(0)
+def predictModel(model_path,contents):
+    global model,device
+    currentmodel =model
+    currentmodel.load_state_dict(dict(torch.load(model_path,map_location=device)))
+    currentmodel.eval()
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    preprocessed_image = preprocess_image(image)
+    with torch.no_grad():
+        predictions = F.softmax(currentmodel(preprocessed_image), dim=1)
+    return predictions.numpy()
 
-@app.post("/predict")
-async def predict(Id : int):
+@app.post("/predict/value")
+async def predictValue(Id : int):
     try:
         df = pd.read_csv('preprocessed_data.csv')
         df = df.loc[df['Id'] == Id]
@@ -95,6 +78,11 @@ async def predict(Id : int):
         return {"prediction":result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
+@app.post("/predict/Color")
+async def predictColor(file: UploadFile = File(...)):
+    contents = await file.read()
+    return predictModel("Color.pth",contents)
+
 @app.post("/car/")
 async def createNewCar(car:CarBase,db:db_dependency):
     if(car.car_year== None or car.brand== None or car.model== None or car.sub_model== None or car.sub_model_name== None or
@@ -170,25 +158,4 @@ async def updateCarById(car:CarBase,car_id:int,db:db_dependency):
     db.add(result)
     db.commit()
     return result
-
-@app.get('/get_firstuser')
-def first_user():
-    #Synchronous
-    api_url = "https://jsonplaceholder.typicode.com/users"
-    all_users = requests.get(api_url).json()
-    user1 = all_users[0]
-    name = user1["name"]
-    email = user1["email"]
-    return {'name': name, "email": email}
-@app.get('/get_seconduser')
-async def second_user():
-    #Asynchronous
-    api_url = "https://jsonplaceholder.typicode.com/users"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(api_url)
-        all_users = response.json()
-        user2 = all_users[1]
-        name = user2["name"]
-        email = user2["email"]
-        return {'name': name, "email": email}
     
