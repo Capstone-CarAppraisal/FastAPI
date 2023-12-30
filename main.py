@@ -19,6 +19,7 @@ from torchvision import transforms
 from fastapi.responses import JSONResponse
 import torchvision
 import torch.nn as nn
+import pickle
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 device = torch.device('cpu')
@@ -27,18 +28,30 @@ model = torchvision.models.efficientnet_v2_s(weights = pretrain_weight)
 model.classifier[1] = nn.Linear(1280, 102)
 model = model.to(device)
 class CarBase(BaseModel):
-    car_year:int | None = None
-    brand:str | None = None
-    model:str| None = None
-    sub_model:str| None = None
-    sub_model_name:str| None = None
-    car_type:str| None = None
-    transmission:str| None = None
-    color:str| None = None
-    modelyear_start:int| None = None
-    modelyear_end:int| None = None
-    mile:int| None = None
-    cost:int| None = None
+    car_year:int 
+    brand:str 
+    model:str
+    sub_model:str
+    sub_model_name:str
+    car_type:str
+    transmission:str
+    color:str
+    modelyear_start:int
+    modelyear_end:int
+    mile:int
+    cost:int
+class CarBaseNoCost(BaseModel):
+    car_year:int 
+    brand:str 
+    model:str
+    sub_model:str
+    sub_model_name:str
+    car_type:str
+    transmission:str
+    color:str
+    modelyear_start:int
+    modelyear_end:int
+    mile:int
 def get_db():
     db= SessionLocal()
     try:
@@ -58,7 +71,7 @@ def preprocess_image(image):
 def predictModel(model_path,contents):
     global model,device
     currentmodel =model
-    currentmodel.load_state_dict(dict(torch.load(model_path,map_location=device)))
+    currentmodel.load_state_dict(torch.load(model_path,map_location=device))
     currentmodel.eval()
     image = Image.open(io.BytesIO(contents)).convert("RGB")
     preprocessed_image = preprocess_image(image)
@@ -67,13 +80,21 @@ def predictModel(model_path,contents):
     return predictions.numpy()
 
 @app.post("/predict/value")
-async def predictValue(Id : int):
+async def predictValue(car : CarBaseNoCost):
     try:
-        df = pd.read_csv('preprocessed_data.csv')
-        df = df.loc[df['Id'] == Id]
-        df.drop(columns=['cost', 'car_model', 'Id'],inplace=True)
-        rfModel = joblib.load("random_forest.model")
-        predict = rfModel.predict(df)
+        d = {'car_year':[car.car_year],'brand':[car.brand],'model':[car.model],'sub_model':[car.sub_model],'sub_model_name':[car.sub_model_name],
+        'car_type':[car.car_type],'transmission':[car.transmission],'model_year_start':[car.modelyear_start],'model_year_end':[car.modelyear_end],
+        'color':[car.color],'mile':[car.mile]}
+        df =pd.DataFrame(data=d)
+
+        print(df)
+        
+        model_file = open('preprocessor.model', 'rb')
+        preprocessor = pickle.load(model_file)
+        model_file.close()
+        df=preprocessor.transform(df)
+        valueModel = joblib.load("random_forest.model")
+        predict = valueModel.predict(df)
         result = predict[0]
         return {"prediction":result}
     except Exception as e:
@@ -85,10 +106,6 @@ async def predictColor(file: UploadFile = File(...)):
 
 @app.post("/car/")
 async def createNewCar(car:CarBase,db:db_dependency):
-    if(car.car_year== None or car.brand== None or car.model== None or car.sub_model== None or car.sub_model_name== None or
-        car.car_type== None or car.transmission== None or car.modelyear_start== None or car.modelyear_end== None or
-        car.color== None or car.mile== None or car.cost==None):
-        raise HTTPException(status_code=404,detail='Invalid car data')
     db_car = models.Car(car_year=car.car_year, brand=car.brand,model=car.model,sub_model=car.sub_model,sub_model_name=car.sub_model_name,
         car_type=car.car_type,transmission=car.transmission,model_year_start=car.modelyear_start,model_year_end=car.modelyear_end,
         color=car.color,mile=car.mile,cost=car.cost)
@@ -119,30 +136,6 @@ async def updateCarById(car:CarBase,car_id:int,db:db_dependency):
     result = db.query(models.Car).filter(models.Car.id == car_id).first()
     if not result:
         raise HTTPException(status_code=404,detail='Car not found')
-    if(car.car_year== None):
-        car.car_year = result.car_year
-    if(car.brand== None):
-        car.brand = result.brand
-    if(car.model== None):
-        car.model = result.model
-    if(car.sub_model== None):
-        car.sub_model = result.sub_model
-    if(car.sub_model_name== None):
-        car.sub_model_name = result.sub_model_name
-    if(car.car_type== None):
-        car.car_type = result.car_type
-    if(car.transmission== None):
-        car.transmission = result.transmission
-    if(car.modelyear_start== None):
-        car.model_year_start = result.model_year_start
-    if(car.modelyear_end== None):
-        car.modelyear_end = result.model_year_end
-    if(car.color== None):
-        car.color = result.color
-    if(car.mile== None):
-        car.mile = result.mile
-    if(car.cost==None):
-        car.cost = result.cost
     result.car_year=car.car_year
     result.brand=car.brand
     result.model=car.model
