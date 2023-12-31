@@ -93,9 +93,15 @@ async def predictValue(car : CarBaseNoCost):
         preprocessor = pickle.load(model_file)
         model_file.close()
         df=preprocessor.transform(df)
-        valueModel = joblib.load("random_forest.model")
+
+        
+        model_file = open('catboost.model', 'rb')
+        valueModel = pickle.load(model_file)
+        model_file.close()
+
         predict = valueModel.predict(df)
         result = predict[0]
+
         return {"prediction":result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
