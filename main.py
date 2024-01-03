@@ -143,6 +143,18 @@ async def predict_value(car : CarBaseNoCost):
         return {"prediction":result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
+@app.post("/predict/front")
+async def predict_rear(file: UploadFile = File(...)):
+    #Wait for front.pt
+    contents = await file.read()
+    predict = predict_image("front.pt",contents)
+    car_model, car_year, car_door =decoder_model_car(predict)
+    return {"prediction":predict,
+            "Brand":"Mazda",
+            "Model":car_model,
+            "ModelYear":car_year,
+            "Door":car_door
+            }
 @app.post("/predict/rear")
 async def predict_rear(file: UploadFile = File(...)):
     contents = await file.read()
@@ -154,8 +166,42 @@ async def predict_rear(file: UploadFile = File(...)):
             "ModelYear":car_year,
             "Door":car_door
             }
+@app.post("/predict/sidefront")
+async def predict_sidefront(file: UploadFile = File(...)):
+    contents = await file.read()
+    predict = predict_image("sidefront.pt",contents)
+    car_model, car_year, car_door =decoder_model_car(predict)
+    return {"prediction":predict,
+            "Brand":"Mazda",
+            "Model":car_model,
+            "ModelYear":car_year,
+            "Door":car_door
+            }
+@app.post("/predict/siderear")
+async def predict_siderear(file: UploadFile = File(...)):
+    contents = await file.read()
+    predict = predict_image("siderear.pt",contents)
+    car_model, car_year, car_door =decoder_model_car(predict)
+    return {"prediction":predict,
+            "Brand":"Mazda",
+            "Model":car_model,
+            "ModelYear":car_year,
+            "Door":car_door
+            }
+@app.post("/predict/whole")
+async def predict_whole(file: UploadFile = File(...)):
+    contents = await file.read()
+    predict = predict_image("whole.pt",contents)
+    car_model, car_year, car_door =decoder_model_car(predict)
+    return {"prediction":predict,
+            "Brand":"Mazda",
+            "Model":car_model,
+            "ModelYear":car_year,
+            "Door":car_door
+            }
 @app.post("/predict/color")
 async def predict_color(file: UploadFile = File(...)):
+    #Wait for color.pt
     contents = await file.read()
     predict = predict_image("color.pt",contents)
     colors = ["Black","Blue","Brown","Green","Grey","Light Blue","Red","White"]
