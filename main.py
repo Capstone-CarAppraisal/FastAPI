@@ -1,3 +1,4 @@
+import collections
 from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI,HTTPException, Depends, UploadFile, File
@@ -22,11 +23,6 @@ import torch.nn as nn
 import pickle
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
-device = torch.device('cpu')
-pretrain_weight = torchvision.models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
-model = torchvision.models.efficientnet_v2_s(weights = pretrain_weight)
-model.classifier[1] = nn.Linear(1280, 102)
-model = model.to(device)
 class CarBase(BaseModel):
     car_year:int 
     brand:str 
@@ -68,16 +64,6 @@ transform = transforms.Compose(
 def preprocess_image(image):
     image = transform(image)
     return image.unsqueeze(0)
-def predictModel(model_path,contents):
-    global model,device
-    currentmodel =model
-    currentmodel.load_state_dict(torch.load(model_path,map_location=device))
-    currentmodel.eval()
-    image = Image.open(io.BytesIO(contents)).convert("RGB")
-    preprocessed_image = preprocess_image(image)
-    with torch.no_grad():
-        predictions = F.softmax(currentmodel(preprocessed_image), dim=1)
-    return predictions.numpy()
 
 @app.post("/predict/value")
 async def predictValue(car : CarBaseNoCost):
@@ -85,10 +71,7 @@ async def predictValue(car : CarBaseNoCost):
         d = {'car_year':[car.car_year],'brand':[car.brand],'model':[car.model],'sub_model':[car.sub_model],'sub_model_name':[car.sub_model_name],
         'car_type':[car.car_type],'transmission':[car.transmission],'model_year_start':[car.modelyear_start],'model_year_end':[car.modelyear_end],
         'color':[car.color],'mile':[car.mile]}
-        df =pd.DataFrame(data=d)
-
-        print(df)
-        
+        df =pd.DataFrame(data=d)        
         model_file = open('preprocessor.model', 'rb')
         preprocessor = pickle.load(model_file)
         model_file.close()
@@ -105,10 +88,27 @@ async def predictValue(car : CarBaseNoCost):
         return {"prediction":result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
-@app.post("/predict/Color")
-async def predictColor(file: UploadFile = File(...)):
+@app.post("/predict/rear")
+async def predictRear(file: UploadFile = File(...)):
     contents = await file.read()
-    return predictModel("Color.pth",contents)
+    device = torch.device('cpu')
+    MLmodel = torch.load('rear.pt',map_location=device)
+    MLmodel.eval()    
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    preprocessed_image = preprocess_image(image)
+    with torch.no_grad():
+        image = preprocessed_image.to(device)
+        output = MLmodel(image)
+        #_, predictions = torch.max(output_scores, 1)
+    predict =0
+    max=output[0][0]
+    n=0
+    for i in output[0]:
+        if max<i:
+            max=i
+            predict=n
+        n+=1
+    return {"prediction":predict}
 
 @app.post("/car/")
 async def createNewCar(car:CarBase,db:db_dependency):
