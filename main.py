@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 import torchvision
 import torch.nn as nn
 import pickle
+from sqlalchemy import func
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 class CarBase(BaseModel):
@@ -254,5 +255,39 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     result.cost=car.cost
     db.add(result)
     db.commit()
-    return result
-    
+    return result  
+@app.get("/cardetail")
+async def get_car_detail(db:db_dependency,car_year_start:int|None=None,car_year_end:int|None=None,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None,transmission:str|None=None,color:str|None=None,model_year_start:str|None=None,model_year_end:str|None=None):
+    db_query=db.query(models.Car)
+    if car_year_end !=None:
+        db_query = db_query.filter(models.Car.car_year<=car_year_end)
+    if car_year_start != None:
+        db_query = db_query.filter(models.Car.car_year>=car_year_start)
+    if brand != None:
+        db_query =db_query.filter(models.Car.model == brand)
+    if model != None:
+        db_query =db_query.filter(models.Car.model == model)
+    if sub_model !=None:
+        db_query = db_query.filter(models.Car.sub_model == sub_model)
+    if sub_model_name !=None:
+        db_query = db_query.filter(models.Car.sub_model_name == sub_model_name)
+    if car_type !=None:
+        db_query = db_query.filter(models.Car.car_type == car_type)
+    if transmission !=None:
+        db_query = db_query.filter(models.Car.transmission== transmission)
+    if color !=None:
+        db_query = db_query.filter(models.Car.color == color)
+    if model_year_start != None:
+        db_query = db_query.filter(models.Car.model_year_end<=model_year_start)
+    if model_year_end!=None:
+        db_query = db_query.filter(models.Car.model_year_start>=model_year_end)
+    avg_cost = db_query.with_entities(func.avg(models.Car.cost).label('avg_cost')).scalar()
+    sd_cost = db_query.with_entities(func.stddev(models.Car.cost).label('sd_cost')).scalar()
+    avg_mile =db_query.with_entities(func.avg(models.Car.mile).label('avg_cost')).scalar()
+    count_car = db_query.with_entities(func.count().label('record_count')).scalar()
+    return {
+        "Average Cost":avg_cost,
+        "SD Cost":sd_cost,
+        "Average Mile":avg_mile,
+        "Number of Cars":count_car
+    }
