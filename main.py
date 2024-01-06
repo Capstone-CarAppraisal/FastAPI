@@ -55,7 +55,7 @@ transform = transforms.Compose(
     ])
 def predict_image(model_path,contents):
     device = torch.device('cpu')
-    if ".pth" in model_path:
+    if isinstance(torch.load(model_path,map_location=device),dict):
         pretrain_weight = torchvision.models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
         MLmodel = torchvision.models.efficientnet_v2_s(weights=pretrain_weight)
         MLmodel.classifier[1] = nn.Linear(1280, 102)
