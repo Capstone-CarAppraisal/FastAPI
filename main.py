@@ -1,23 +1,15 @@
-import collections
-from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI,HTTPException, Depends, UploadFile, File
-from typing import Optional ,List ,Annotated
+from typing import  Annotated
 from pydantic import BaseModel
-import requests
-import httpx
 import models
 from database import engine,SessionLocal
 from sqlalchemy.orm import Session
 import pandas as pd
-import joblib
 from PIL import Image
 import io
-import numpy as np
 import torch
-import torch.nn.functional as F
 from torchvision import transforms
-from fastapi.responses import JSONResponse
 import torchvision
 import torch.nn as nn
 import pickle
@@ -63,7 +55,13 @@ transform = transforms.Compose(
     ])
 def predict_image(model_path,contents):
     device = torch.device('cpu')
-    MLmodel = torch.load(model_path,map_location=device)
+    if ".pth" in model_path:
+        pretrain_weight = torchvision.models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
+        MLmodel = torchvision.models.efficientnet_v2_s(weights=pretrain_weight)
+        MLmodel.classifier[1] = nn.Linear(1280, 102)
+        MLmodel.load_state_dict(torch.load(model_path,map_location=device))
+    else:
+        MLmodel = torch.load(model_path,map_location=device)
     MLmodel.eval()    
     image = Image.open(io.BytesIO(contents)).convert("RGB")
     preprocessed_image = preprocess_image(image)
@@ -82,7 +80,7 @@ def predict_image(model_path,contents):
 def preprocess_image(image):
     image = transform(image)
     return image.unsqueeze(0)
-def decoder_model_car(predict):
+def decoder_model_car(predict,i):
     car_model ="error"
     car_year = "error"
     car_door = "error"
@@ -124,7 +122,13 @@ def decoder_model_car(predict):
         car_model = "CX8";car_year = "17-23";car_door="-"
     elif predict==18:
         car_model = "CX30";car_year = "17-23";car_door="-"
-    return car_model,car_year,car_door
+    return {"prediction":predict,
+            "Brand":"Mazda",
+            "ImageId":i,
+            "Model":car_model,
+            "ModelYear":car_year,
+            "Door":car_door
+            }
 @app.post("/predict/value")
 async def predict_value(car : CarBaseNoCost):
     try:
@@ -145,70 +149,69 @@ async def predict_value(car : CarBaseNoCost):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error making predictions: {str(e)}")
 @app.post("/predict/front")
-async def predict_rear(file: UploadFile = File(...)):
-    #Wait for front.pt
-    contents = await file.read()
-    predict = predict_image("front.pt",contents)
-    car_model, car_year, car_door =decoder_model_car(predict)
-    return {"prediction":predict,
-            "Brand":"Mazda",
-            "Model":car_model,
-            "ModelYear":car_year,
-            "Door":car_door
-            }
+async def predict_front(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("front.pt",contents)
+        predictions.append(decoder_model_car(predict,i))
+        i+=1
+    return {"All prediction":predictions}
 @app.post("/predict/rear")
-async def predict_rear(file: UploadFile = File(...)):
-    contents = await file.read()
-    predict = predict_image("rear.pt",contents)
-    car_model, car_year, car_door =decoder_model_car(predict)
-    return {"prediction":predict,
-            "Brand":"Mazda",
-            "Model":car_model,
-            "ModelYear":car_year,
-            "Door":car_door
-            }
+async def predict_rear(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("rear.pt",contents)
+        predictions.append(decoder_model_car(predict,i))
+        i+=1
+    return {"All prediction":predictions}
 @app.post("/predict/sidefront")
-async def predict_sidefront(file: UploadFile = File(...)):
-    contents = await file.read()
-    predict = predict_image("sidefront.pt",contents)
-    car_model, car_year, car_door =decoder_model_car(predict)
-    return {"prediction":predict,
-            "Brand":"Mazda",
-            "Model":car_model,
-            "ModelYear":car_year,
-            "Door":car_door
-            }
+async def predict_sidefront(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("sidefront.pt",contents)
+        predictions.append(decoder_model_car(predict,i))
+        i+=1
+    return {"All prediction":predictions}
 @app.post("/predict/siderear")
-async def predict_siderear(file: UploadFile = File(...)):
-    contents = await file.read()
-    predict = predict_image("siderear.pt",contents)
-    car_model, car_year, car_door =decoder_model_car(predict)
-    return {"prediction":predict,
-            "Brand":"Mazda",
-            "Model":car_model,
-            "ModelYear":car_year,
-            "Door":car_door
-            }
-@app.post("/predict/whole")
-async def predict_whole(file: UploadFile = File(...)):
-    contents = await file.read()
-    predict = predict_image("whole.pt",contents)
-    car_model, car_year, car_door =decoder_model_car(predict)
-    return {"prediction":predict,
-            "Brand":"Mazda",
-            "Model":car_model,
-            "ModelYear":car_year,
-            "Door":car_door
-            }
+async def predict_siderear(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("siderear.pt",contents)
+        predictions.append(decoder_model_car(predict,i))
+        i+=1
+    return {"All prediction":predictions}
+@app.post("/predict/fourside")
+async def predict_fourside(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("4side.pt",contents)
+        predictions.append(decoder_model_car(predict,i))
+        i+=1
+    return {"All prediction":predictions}
 @app.post("/predict/color")
-async def predict_color(file: UploadFile = File(...)):
-    #Wait for color.pt
-    contents = await file.read()
-    predict = predict_image("color.pt",contents)
-    colors = ["Black","Blue","Brown","Green","Grey","Light Blue","Red","White"]
-    return {"prediction":predict,
-            "color":colors[predict]
-            }
+async def predict_color(files: list[UploadFile] = File(...)):
+    predictions = []
+    i=0
+    for file in files:
+        contents = await file.read()
+        predict = predict_image("4side.pt",contents)
+        colors = ["Black","Blue","Brown","Green","Grey","Light Blue","Red","White"]
+        predictions.append({"prediction":predict,
+            "color":colors[predict],
+            "ImageId":i
+            })
+        i+=1
+    return {"All prediction":predictions}
 @app.post("/car/")
 async def create_new_car(car:CarBase,db:db_dependency):
     db_car = models.Car(car_year=car.car_year, brand=car.brand,model=car.model,sub_model=car.sub_model,sub_model_name=car.sub_model_name,
