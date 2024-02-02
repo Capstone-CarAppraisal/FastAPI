@@ -260,7 +260,7 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     db.commit()
     return result  
 @app.get("/car_market_detail")
-async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None,transmission:str|None=None,color:str|None=None):
+async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
     db_query=db.query(models.Car)
     if brand != None:
         db_query =db_query.filter(models.Car.model == brand)
@@ -272,10 +272,7 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
         db_query = db_query.filter(models.Car.sub_model_name == sub_model_name)
     if car_type !=None:
         db_query = db_query.filter(models.Car.car_type == car_type)
-    if transmission !=None:
-        db_query = db_query.filter(models.Car.transmission== transmission)
-    if color !=None:
-        db_query = db_query.filter(models.Car.color == color)
+
     avg_cost = db_query.with_entities(func.avg(models.Car.cost).label('avg_cost')).scalar()
     sd_cost = db_query.with_entities(func.stddev(models.Car.cost).label('sd_cost')).scalar()
     avg_mile =db_query.with_entities(func.avg(models.Car.mile).label('avg_cost')).scalar()
