@@ -260,12 +260,8 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     db.commit()
     return result  
 @app.get("/car_market_detail")
-async def get_car_market_detail(db:db_dependency,car_year_start:int|None=None,car_year_end:int|None=None,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None,transmission:str|None=None,color:str|None=None,model_year_start:str|None=None,model_year_end:str|None=None):
+async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None,transmission:str|None=None,color:str|None=None):
     db_query=db.query(models.Car)
-    if car_year_end !=None:
-        db_query = db_query.filter(models.Car.car_year<=car_year_end)
-    if car_year_start != None:
-        db_query = db_query.filter(models.Car.car_year>=car_year_start)
     if brand != None:
         db_query =db_query.filter(models.Car.model == brand)
     if model != None:
@@ -280,15 +276,15 @@ async def get_car_market_detail(db:db_dependency,car_year_start:int|None=None,ca
         db_query = db_query.filter(models.Car.transmission== transmission)
     if color !=None:
         db_query = db_query.filter(models.Car.color == color)
-    if model_year_start != None:
-        db_query = db_query.filter(models.Car.model_year_end<=model_year_start)
-    if model_year_end!=None:
-        db_query = db_query.filter(models.Car.model_year_start>=model_year_end)
     avg_cost = db_query.with_entities(func.avg(models.Car.cost).label('avg_cost')).scalar()
     sd_cost = db_query.with_entities(func.stddev(models.Car.cost).label('sd_cost')).scalar()
     avg_mile =db_query.with_entities(func.avg(models.Car.mile).label('avg_cost')).scalar()
     count_car = db_query.with_entities(func.count(models.Car.id).label('record_count')).scalar()
+    
+    db_query = db_query.filter(models.Car.car_year== car_year)
+    first_car_cost = 1000 #Will be determined
     return {
+        "First car cost": first_car_cost,
         "Average Cost":avg_cost,
         "SD Cost":sd_cost,
         "Average Mile":avg_mile,
