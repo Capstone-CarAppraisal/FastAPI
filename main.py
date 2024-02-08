@@ -263,7 +263,7 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
 async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
     db_query=db.query(models.Car)
     if brand != None:
-        db_query =db_query.filter(models.Car.model == brand)
+        db_query =db_query.filter(models.Car.brand == brand)
     if model != None:
         db_query =db_query.filter(models.Car.model == model)
     if sub_model !=None:
