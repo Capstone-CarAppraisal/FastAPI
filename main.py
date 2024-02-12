@@ -260,7 +260,7 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     db.commit()
     return result  
 @app.get("/car_market_detail")
-async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
+async def get_car_market_detail(db:db_dependency,car_year:int,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
     db_query=db.query(models.Car)
     if brand != None:
         db_query =db_query.filter(models.Car.model == brand)
@@ -277,9 +277,22 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
     sd_cost = db_query.with_entities(func.stddev(models.Car.cost).label('sd_cost')).scalar()
     avg_mile =db_query.with_entities(func.avg(models.Car.mile).label('avg_cost')).scalar()
     count_car = db_query.with_entities(func.count(models.Car.id).label('record_count')).scalar()
-    
-    db_query = db_query.filter(models.Car.car_year== car_year)
-    first_car_cost = 1000 #Will be determined
+    try:
+        sub_model = float(sub_model)
+    except:
+        sub_model
+    df_one2car = pd.read_csv('one2car_map.csv')
+    df_one2car_filter = df_one2car[
+    (df_one2car['brand'] == brand) &
+    (df_one2car['car_year'] == car_year) &
+    (df_one2car['model'] == model) &
+    (df_one2car['sub_model'] == sub_model)&
+    (df_one2car['sub_model_name'] == sub_model_name) &
+    (df_one2car['car_type'] == car_type)
+    ]
+    id = df_one2car_filter['ttb_bluebook_id'][0]
+    df_ttb = pd.read_csv('ttb_map.csv')
+    first_car_cost = df_ttb['1st_hand_price'][id].item()
     return {
         "First car cost": first_car_cost,
         "Average Cost":avg_cost,
