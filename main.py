@@ -14,6 +14,7 @@ import torchvision
 import torch.nn as nn
 import pickle
 from sqlalchemy import func
+import json
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 class CarBase(BaseModel):
@@ -294,10 +295,18 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
     id = df_one2car_filter['ttb_bluebook_id'][0]
     df_ttb = pd.read_csv('ttb_map.csv')
     first_car_cost = df_ttb['1st_hand_price'][id].item()
+    all_query = db_query.all()
+    data=1
+    json_all_data=list()
+    for query in all_query:
+        json_data = query.__dict__
+        json_all_data.append(json_data)
+    sort_data = sorted(json_all_data, key=lambda x: x['cost'])
     return {
         "First car cost": first_car_cost,
         "Average Cost":avg_cost,
         "SD Cost":sd_cost,
         "Average Mile":avg_mile,
-        "Number of Cars":count_car
+        "Number of Cars":count_car,
+        "Sort Data":sort_data
     }
