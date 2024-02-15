@@ -301,7 +301,9 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
     for query in all_query:
         json_data = query.__dict__
         json_all_data.append(json_data)
-    sort_data = sorted(json_all_data, key=lambda x: x['cost'])
+    sort_data = sorted(json_all_data, key=lambda x: x['cost'], reverse=True)
+    for i, item in enumerate(sort_data, start=1):
+        item['rank'] = i
     return {
         "First car cost": first_car_cost,
         "Average Cost":avg_cost,
