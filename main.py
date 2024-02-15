@@ -260,7 +260,7 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     db.commit()
     return result  
 @app.get("/car_market_detail")
-async def get_car_market_detail(db:db_dependency,car_year:int,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
+async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
     db_query=db.query(models.Car)
     if brand != None:
         db_query =db_query.filter(models.Car.brand == brand)
@@ -278,6 +278,7 @@ async def get_car_market_detail(db:db_dependency,car_year:int,brand:str|None=Non
     avg_mile =db_query.with_entities(func.avg(models.Car.mile).label('avg_cost')).scalar()
     count_car = db_query.with_entities(func.count(models.Car.id).label('record_count')).scalar()
     try:
+        car_year = int(car_year)
         sub_model = float(sub_model)
     except:
         sub_model
