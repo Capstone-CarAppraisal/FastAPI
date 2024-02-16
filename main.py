@@ -261,7 +261,7 @@ async def update_car_by_id(car:CarBase,car_id:int,db:db_dependency):
     db.commit()
     return result  
 @app.get("/car_market_detail")
-async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None):
+async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=None,model:str|None=None,sub_model:str|None=None,sub_model_name:str|None=None,car_type:str|None=None,predict_value:float|None=None):
     db_query=db.query(models.Car)
     if brand != None:
         db_query =db_query.filter(models.Car.brand == brand)
@@ -304,11 +304,37 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
     sort_data = sorted(json_all_data, key=lambda x: x['cost'], reverse=True)
     for i, item in enumerate(sort_data, start=1):
         item['rank'] = i
+    max_price = None
+    min_price = None
+    try:
+        max_price=sort_data[0]['cost']
+        min_price=sort_data[-1]['cost']
+    except:
+        max_price
+    car_show = list()
+    if(len(sort_data)<=5):
+        car_show = sort_data
+    else:
+        car_show.append(sort_data[0])
+        closest = abs(sort_data[0]['cost']-predict_value)
+        i=0
+        index=0
+        for data in sort_data:
+            if closest>abs(data['cost']-predict_value):
+                closest = abs(data['cost']-predict_value)
+                index=i
+            i+=1
+        car_show.append(sort_data[index-1])
+        car_show.append(sort_data[index])
+        car_show.append(sort_data[index+1])
+        car_show.append(sort_data[-1])
     return {
         "First car cost": first_car_cost,
         "Average Cost":avg_cost,
         "SD Cost":sd_cost,
         "Average Mile":avg_mile,
         "Number of Cars":count_car,
-        "Sort Data":sort_data
+        "Max price":max_price,
+        "Min price":min_price,
+        "Car show":car_show
     }
