@@ -292,7 +292,8 @@ async def get_car_market_detail(db:db_dependency,car_year:str,brand:str|None=Non
     (df_one2car['sub_model_name'] == sub_model_name) &
     (df_one2car['car_type'] == car_type)
     ]
-    id = df_one2car_filter['ttb_bluebook_id'][0]
+    id = df_one2car_filter.iloc[0]
+    id = id['ttb_bluebook_id']
     df_ttb = pd.read_csv('ttb_map.csv')
     first_car_cost = df_ttb['1st_hand_price'][id].item()
     all_query = db_query.all()
