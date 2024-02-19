@@ -15,9 +15,20 @@ import torch.nn as nn
 import pickle
 from sqlalchemy import func
 import json
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class CarBase(BaseModel):
     car_year: int
