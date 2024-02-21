@@ -312,14 +312,14 @@ async def predict_color(files: list[UploadFile] = File(...)):
         i += 1
     return {"All prediction": predictions}
 
-@app.post("predict/onecar")
+@app.post("/predict/onecar")
 async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
     car = predict_one(_1,_2,_3,_4)
     predictions = decoder_model_car(car,0)
     return {"Prediction":predictions
             }
     
-@app.post("predict/onecolor")
+@app.post("/predict/onecolor")
 async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
     car = predict_one(_1,_2,_3,_4)
     colors = ["Black", "Blue", "Brown", "Green",
