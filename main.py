@@ -183,7 +183,25 @@ def decoder_model_car(predict, i):
             "ModelYear": car_year,
             "Door": car_door
             }
-
+    
+def predict_one(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
+    L = list()
+    L.append(_1)
+    L.append(_2)
+    L.append(_3)
+    L.append(_4)
+    max_count =0
+    cnt=0
+    ans= None
+    for i in range(4):
+        if L[i] == None:continue
+        cnt=0
+        for j in L:
+            if j == L[i]:cnt+=1
+        if cnt>max_count:
+            max_count=cnt
+            ans=L[i]
+    return ans
 
 @app.post("/predict/value")
 async def predict_value(car: CarBaseNoCost):
@@ -283,6 +301,22 @@ async def predict_color(files: list[UploadFile] = File(...)):
         i += 1
     return {"All prediction": predictions}
 
+@app.post("predict/onecar")
+async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
+    car = predict_one(_1,_2,_3,_4)
+    predictions = decoder_model_car(car,0)
+    return {"Prediction":predictions
+            }
+    
+@app.post("predict/onecolor")
+async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
+    car = predict_one(_1,_2,_3,_4)
+    colors = ["Black", "Blue", "Brown", "Green",
+                  "Grey", "Light Blue", "Red", "White"]
+    predictions = {"prediction": car,
+                            "color": colors[car]}
+    return {"Prediction":predictions
+            }
 
 @app.post("/car/")
 async def create_new_car(car: CarBase, db: db_dependency):
