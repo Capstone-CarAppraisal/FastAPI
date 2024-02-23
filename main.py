@@ -17,6 +17,7 @@ from sqlalchemy import func
 import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 app = FastAPI()
 models.Base.metadata.create_all(bind=engine)
 
@@ -58,13 +59,18 @@ class CarBaseNoCost(BaseModel):
     #modelyear_end: int
     mile: int
 
+class CarPredictRequest(BaseModel):
+    front: Optional[int] = None
+    rear: Optional[int] = None
+    sidefront: Optional[int] = None
+    siderear: Optional[int] = None
 
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
-        db.close()
+        db.close() 
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -313,14 +319,22 @@ async def predict_color(files: list[UploadFile] = File(...)):
     return {"All prediction": predictions}
 
 @app.post("/predict/onecar")
-async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
-    car = predict_one(_1,_2,_3,_4)
-    predictions = decoder_model_car(car,0)
-    return {"Prediction":predictions
-            }
+async def predict_onecar(request_body: CarPredictRequest):
+    _1 = request_body.front
+    _2 = request_body.rear
+    _3 = request_body.sidefront
+    _4 = request_body.siderear
+    car = predict_one(_1, _2, _3, _4)
+    predictions = decoder_model_car(car, 0)
+    
+    return {"Prediction": predictions}
     
 @app.post("/predict/onecolor")
-async def predict_onecar(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
+async def predict_onecar(request_body: CarPredictRequest):
+    _1 = request_body.front
+    _2 = request_body.rear
+    _3 = request_body.sidefront
+    _4 = request_body.siderear
     car = predict_one(_1,_2,_3,_4)
     colors = ["Black", "Blue", "Brown", "Green",
                   "Grey", "Light Blue", "Red", "White"]
