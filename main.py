@@ -346,7 +346,7 @@ async def predict_onecar(request_body: CarPredictRequest):
     _4 = request_body.siderear
     car = predict_one(_1, _2, _3, _4)
     colors = ["Black", "Blue", "Brown", "Green",
-              "Grey", "Light Blue", "Red", "White"]
+              "Grey", "Sky", "Red", "White"]
     predictions = {"prediction": car,
                    "color": colors[car]}
     return {"Prediction": predictions
