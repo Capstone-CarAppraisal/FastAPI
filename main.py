@@ -317,7 +317,7 @@ async def predict_color(files: list[UploadFile] = File(...)):
         contents = await file.read()
         predict = predict_image("color.pt", contents)
         colors = ["Black", "Blue", "Brown", "Green",
-                  "Grey", "Light Blue", "Red", "White"]
+                  "Gray", "Light Blue", "Red", "White"]
         predictions.append({"prediction": predict,
                             "color": colors[predict],
                             "ImageId": i
@@ -346,7 +346,7 @@ async def predict_onecar(request_body: CarPredictRequest):
     _4 = request_body.siderear
     car = predict_one(_1, _2, _3, _4)
     colors = ["Black", "Blue", "Brown", "Green",
-              "Grey", "Sky", "Red", "White"]
+              "Gray", "Sky", "Red", "White"]
     predictions = {"prediction": car,
                    "color": colors[car]}
     return {"Prediction": predictions
