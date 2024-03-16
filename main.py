@@ -31,6 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class CarBase(BaseModel):
     car_year: int
     brand: str
@@ -55,9 +56,10 @@ class CarBaseNoCost(BaseModel):
     car_type: str
     transmission: str
     color: str
-    #modelyear_start: int
-    #modelyear_end: int
+    # modelyear_start: int
+    # modelyear_end: int
     mile: int
+
 
 class CarPredictRequest(BaseModel):
     front: Optional[int] = None
@@ -65,12 +67,13 @@ class CarPredictRequest(BaseModel):
     sidefront: Optional[int] = None
     siderear: Optional[int] = None
 
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -166,31 +169,31 @@ def decoder_model_car(predict, i):
         car_year = "19-23"
         car_door = 5
     elif predict == 12:
-        car_model = "BT50"
+        car_model = "BT-50"
         car_year = "06-10"
         car_door = "-"
     elif predict == 13:
-        car_model = "BT50"
+        car_model = "BT-50"
         car_year = "11-20"
         car_door = "-"
     elif predict == 14:
-        car_model = "BT50"
+        car_model = "BT-50"
         car_year = "20-23"
         car_door = "-"
     elif predict == 15:
-        car_model = "CX3"
+        car_model = "CX-3"
         car_year = "15-23"
         car_door = "-"
     elif predict == 16:
-        car_model = "CX5"
+        car_model = "CX-5"
         car_year = "13-17"
         car_door = "-"
     elif predict == 17:
-        car_model = "CX8"
+        car_model = "CX-8"
         car_year = "17-23"
         car_door = "-"
     elif predict == 18:
-        car_model = "CX30"
+        car_model = "CX-30"
         car_year = "17-23"
         car_door = "-"
     return {"prediction": predict,
@@ -200,31 +203,35 @@ def decoder_model_car(predict, i):
             "ModelYear": car_year,
             "Door": car_door
             }
-    
-def predict_one(_1:int|None=None,_2:int|None=None,_3:int|None=None,_4:int|None=None):
+
+
+def predict_one(_1: int | None = None, _2: int | None = None, _3: int | None = None, _4: int | None = None):
     L = list()
     L.append(_1)
     L.append(_2)
     L.append(_3)
     L.append(_4)
-    max_count =0
-    cnt=0
-    ans= None
+    max_count = 0
+    cnt = 0
+    ans = None
     for i in range(4):
-        if L[i] == None:continue
-        cnt=0
+        if L[i] == None:
+            continue
+        cnt = 0
         for j in L:
-            if j == L[i]:cnt+=1
-        if cnt>max_count:
-            max_count=cnt
-            ans=L[i]
+            if j == L[i]:
+                cnt += 1
+        if cnt > max_count:
+            max_count = cnt
+            ans = L[i]
     return ans
+
 
 @app.post("/predict/value")
 async def predict_value(car: CarBaseNoCost):
     try:
         d = {'car_year': [car.car_year], 'brand': [car.brand], 'model': [car.model], 'sub_model': [car.sub_model], 'sub_model_name': [car.sub_model_name],
-             'car_type': [car.car_type], 'transmission': [car.transmission], 'model_year_start':[15], 'model_year_end': [15],
+             'car_type': [car.car_type], 'transmission': [car.transmission], 'model_year_start': [15], 'model_year_end': [15],
              'color': [car.color], 'mile': [car.mile]}
         df = pd.DataFrame(data=d)
         model_file = open('preprocessor.model', 'rb')
@@ -310,13 +317,14 @@ async def predict_color(files: list[UploadFile] = File(...)):
         contents = await file.read()
         predict = predict_image("color.pt", contents)
         colors = ["Black", "Blue", "Brown", "Green",
-                  "Grey", "Light Blue", "Red", "White"]
+                  "Gray", "Light Blue", "Red", "White"]
         predictions.append({"prediction": predict,
                             "color": colors[predict],
                             "ImageId": i
                             })
         i += 1
     return {"All prediction": predictions}
+
 
 @app.post("/predict/onecar")
 async def predict_onecar(request_body: CarPredictRequest):
@@ -326,22 +334,24 @@ async def predict_onecar(request_body: CarPredictRequest):
     _4 = request_body.siderear
     car = predict_one(_1, _2, _3, _4)
     predictions = decoder_model_car(car, 0)
-    
+
     return {"Prediction": predictions}
-    
+
+
 @app.post("/predict/onecolor")
 async def predict_onecar(request_body: CarPredictRequest):
     _1 = request_body.front
     _2 = request_body.rear
     _3 = request_body.sidefront
     _4 = request_body.siderear
-    car = predict_one(_1,_2,_3,_4)
+    car = predict_one(_1, _2, _3, _4)
     colors = ["Black", "Blue", "Brown", "Green",
-                  "Grey", "Light Blue", "Red", "White"]
+              "Gray", "Sky", "Red", "White"]
     predictions = {"prediction": car,
-                            "color": colors[car]}
-    return {"Prediction":predictions
+                   "color": colors[car]}
+    return {"Prediction": predictions
             }
+
 
 @app.post("/car/")
 async def create_new_car(car: CarBase, db: db_dependency):
