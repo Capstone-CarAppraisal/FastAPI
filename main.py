@@ -483,3 +483,15 @@ async def get_car_market_detail(db: db_dependency, car_year: str, brand: str | N
         "Min price": min_price,
         "Car show": car_show
     }
+
+@app.get("/msc_code")
+async def get_car_by_msc_code(db: db_dependency,msc_code:str):
+    msctable = pd.read_csv('MSCcode.csv')
+    filter_msc = msctable[msctable['msc_code'] == msc_code]
+    data = filter_msc.iloc[0]
+    return {
+        "model":data['model'],
+        "submodel":data['submodel'],
+        "submodel_name":data['submodel_name'],
+        "model_year":data['model_year'].item()
+    }
