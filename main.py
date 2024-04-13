@@ -358,7 +358,6 @@ async def create_new_car(car: CarBase, db: db_dependency):
     db_car = models.Car(car_year=car.car_year, brand=car.brand, model=car.model, sub_model=car.sub_model, sub_model_name=car.sub_model_name,
                         car_type=car.car_type, transmission=car.transmission, model_year_start=car.modelyear_start, model_year_end=car.modelyear_end,
                         color=car.color, mile=car.mile, cost=car.cost)
-    print("Test")
     db.add(db_car)
     db.commit()
     return db_car
@@ -411,7 +410,7 @@ async def update_car_by_id(car: CarBase, car_id: int, db: db_dependency):
 
 
 @app.get("/car_market_detail")
-async def get_car_market_detail(db: db_dependency, car_year: str, brand: str | None = None, model: str | None = None, sub_model: str | None = None, sub_model_name: str | None = None, car_type: str | None = None, predict_value: float | None = None):
+async def get_car_market_detail(db: db_dependency, car_year: str, brand: str | None = None, model: str | None = None, sub_model: str | None = None, sub_model_name: str | None = None, car_type: str | None = None):
     db_query = db.query(models.Car)
     if brand != None:
         db_query = db_query.filter(models.Car.brand == brand)
@@ -470,19 +469,8 @@ async def get_car_market_detail(db: db_dependency, car_year: str, brand: str | N
     if (len(sort_data) <= 5):
         car_show = sort_data
     else:
-        car_show.append(sort_data[0])
-        closest = abs(sort_data[0]['cost']-predict_value)
-        i = 0
-        index = 0
-        for data in sort_data:
-            if closest > abs(data['cost']-predict_value):
-                closest = abs(data['cost']-predict_value)
-                index = i
-            i += 1
-        car_show.append(sort_data[index-1])
-        car_show.append(sort_data[index])
-        car_show.append(sort_data[index+1])
-        car_show.append(sort_data[-1])
+        for i in range(5):
+            car_show.append(sort_data[i])
     return {
         "First car cost": first_car_cost,
         "Average Cost": avg_cost,
