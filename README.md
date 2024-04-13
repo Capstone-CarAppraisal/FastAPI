@@ -10,6 +10,10 @@ Next, install package(FastAPI, SQLAlchemy, psycopg2-binary)
 ```
 pip install fastapi sqlalchemy psycopg2-binary
 ```
+Or just
+```
+pip install -r "requirements.txt"
+```
 ## Add database file
 Next, you must create database file with code below this, you must to edit code in line URL_DATABASE = REPLACE_URL_DATABASE with your url of database
 ```
