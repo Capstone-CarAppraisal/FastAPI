@@ -56,8 +56,8 @@ class CarBaseNoCost(BaseModel):
     car_type: str
     transmission: str
     color: str
-    # modelyear_start: int
-    # modelyear_end: int
+    modelyear_start: int
+    modelyear_end: int
     mile: int
 
 
@@ -231,7 +231,7 @@ def predict_one(_1: int | None = None, _2: int | None = None, _3: int | None = N
 async def predict_value(car: CarBaseNoCost):
     try:
         d = {'car_year': [car.car_year], 'brand': [car.brand], 'model': [car.model], 'sub_model': [car.sub_model], 'sub_model_name': [car.sub_model_name],
-             'car_type': [car.car_type], 'transmission': [car.transmission], 'model_year_start': [15], 'model_year_end': [15],
+             'car_type': [car.car_type], 'transmission': [car.transmission], 'model_year_start': [car.modelyear_start], 'model_year_end': [car.modelyear_end],
              'color': [car.color], 'mile': [car.mile]}
         df = pd.DataFrame(data=d)
         model_file = open('preprocessor.model', 'rb')
